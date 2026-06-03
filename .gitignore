@@ -1,0 +1,14 @@
+target/
+.cargo/
+Cargo.lock
+Cargo.toml.orig
+Cargo_build.toml
+dist/
+*.exe
+*.pdb
+*.log
+logs/
+*.snssdk*
+*.tmp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,203 @@
+name: Build Ranking (No-Official-API)
+
+on:
+  push:
+    branches: [ "**" ]
+    paths:
+      - "src/**"
+      - "Cargo_no_official.toml"
+      - ".github/workflows/build-ranking.yml"
+  workflow_dispatch:
+
+env:
+  CARGO_NO_UNSTABLE_FLAGS: true
+
+jobs:
+  build-linux:
+    name: Build (linux-amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout A Repository
+        uses: actions/checkout@v4
+
+      - name: Compute Cargo.lock hash
+        id: cargo-lock-hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f Cargo.lock ]; then
+            echo "hash=missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if command -v python3 >/dev/null 2>&1; then
+            PYTHON=python3
+          else
+            PYTHON=python
+          fi
+          HASH=$($PYTHON -c "import hashlib, pathlib; print(hashlib.sha256(pathlib.Path('Cargo.lock').read_bytes()).hexdigest())")
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-ranking-${{ steps.cargo-lock-hash.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-ranking-
+
+      - name: Switch to no-official-api mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp Cargo_no_official.toml Cargo.toml
+
+      - name: Build release binary (Linux, TTS only)
+        run: cargo build --release --features tts
+
+      - name: Bundle artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          REF="${GITHUB_REF_NAME:-dev}"
+          REF="${REF//\//-}"
+          out="TomatoNovelDownloader-Linux_amd64-${REF}"
+          cp target/release/tomato-novel-downloader "dist/${out}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build-ranking
+          path: dist
+
+  build-windows:
+    name: Build (windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout A Repository
+        uses: actions/checkout@v4
+
+      - name: Compute Cargo.lock hash
+        id: cargo-lock-hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f Cargo.lock ]; then
+            echo "hash=missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if command -v python3 >/dev/null 2>&1; then
+            PYTHON=python3
+          else
+            PYTHON=python
+          fi
+          HASH=$($PYTHON -c "import hashlib, pathlib; print(hashlib.sha256(pathlib.Path('Cargo.lock').read_bytes()).hexdigest())")
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-ranking-${{ steps.cargo-lock-hash.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-ranking-
+
+      - name: Switch to no-official-api mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp Cargo_no_official.toml Cargo.toml
+
+      - name: Build release binary (Windows, TTS + Clipboard)
+        run: cargo build --release --features tts,clipboard,clipboard-arboard
+
+      - name: Bundle artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          REF="${GITHUB_REF_NAME:-dev}"
+          REF="${REF//\//-}"
+          out="TomatoNovelDownloader-Win64-${REF}.exe"
+          cp target/release/tomato-novel-downloader.exe "dist/${out}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-ranking
+          path: dist
+
+  build-macos:
+    name: Build (macos-arm64)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout A Repository
+        uses: actions/checkout@v4
+
+      - name: Compute Cargo.lock hash
+        id: cargo-lock-hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f Cargo.lock ]; then
+            echo "hash=missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if command -v python3 >/dev/null 2>&1; then
+            PYTHON=python3
+          else
+            PYTHON=python
+          fi
+          HASH=$($PYTHON -c "import hashlib, pathlib; print(hashlib.sha256(pathlib.Path('Cargo.lock').read_bytes()).hexdigest())")
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-ranking-${{ steps.cargo-lock-hash.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-ranking-
+
+      - name: Switch to no-official-api mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp Cargo_no_official.toml Cargo.toml
+
+      - name: Build release binary (macOS, TTS + Clipboard)
+        run: cargo build --release --features tts,clipboard,clipboard-arboard
+
+      - name: Bundle artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          REF="${GITHUB_REF_NAME:-dev}"
+          REF="${REF//\//-}"
+          out="TomatoNovelDownloader-macOS_arm64-${REF}"
+          cp target/release/tomato-novel-downloader "dist/${out}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build-ranking
+          path: dist
