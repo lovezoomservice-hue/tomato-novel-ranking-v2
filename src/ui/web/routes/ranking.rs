@@ -2,7 +2,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::ranking;
 use crate::ui::web::state::AppState;
@@ -10,7 +10,7 @@ use crate::ui::web::state::AppState;
 /// 获取榜单分类列表（频道 + 榜单入口）。
 pub(crate) async fn api_ranking_categories(
     State(_state): State<AppState>,
-) -> Result<Json, (StatusCode, Json)> {
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let channels = tokio::task::spawn_blocking(ranking::get_ranking_categories)
         .await
         .map_err(|_| api_error(StatusCode::INTERNAL_SERVER_ERROR, "榜单分类任务执行失败"))?
@@ -35,7 +35,7 @@ pub(crate) struct BooksQuery {
 pub(crate) async fn api_ranking_books(
     State(_state): State<AppState>,
     Query(q): Query<BooksQuery>,
-) -> Result<Json, (StatusCode, Json)> {
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let page = q.page.unwrap_or(1).max(1);
     let size = q.size.unwrap_or(50).min(100).max(1);
 
@@ -54,7 +54,6 @@ pub(crate) async fn api_ranking_books(
     })))
 }
 
-fn api_error(status: StatusCode, message: impl Into<String>) -> (StatusCode, Json) {
+fn api_error(status: StatusCode, message: impl Into<String>) -> (StatusCode, Json<Value>) {
     (status, Json(json!({ "error": message.into() })))
 }
-
